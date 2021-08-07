@@ -1,4 +1,5 @@
 import re
+from collections import Counter
 from gzip import GzipFile
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -26,6 +27,10 @@ class Paper(BaseModel):
     def get_authors(self) -> List[str]:
         # Eg "Yao, Yiqun  and\n      Papakostas, Michalis  and\n      Burzo, Mihai"
         return [name.strip() for name in self.author.split("and\n")]
+
+    def get_conference_code(self) -> str:
+        # Eg "https://aclanthology.org/2021.naacl-main.216" -> naacl
+        return self.url.split("/")[-1].split("-")[0].split(".")[-1]
 
     @classmethod
     def parse_line(cls, line: str) -> Tuple[str, str]:
@@ -93,11 +98,12 @@ class BibtexData(BaseModel):
         return splits
 
 
-def test_data(path: str = "anthology+abstracts.bib.gz"):
+def test_data(path: str = "data/anthology+abstracts.bib.gz"):
     data = BibtexData.load(Path(path))
     paper = data.papers[1000]
     print(paper.json(indent=2))
     print(paper.get_authors())
+    print(dict(events=Counter([p.get_conference_code() for p in data.papers])))
 
 
 if __name__ == "__main__":
