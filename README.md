@@ -5,6 +5,7 @@ Find NLP Conference Papers Easily
 ### Usage
 
 ```
+bash setup_data.sh
 pip install -r requirements.txt
 streamlit run main.py
 ```
