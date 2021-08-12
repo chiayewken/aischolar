@@ -1,0 +1,45 @@
+{
+  "MachineLearning": [
+    "iclr",
+    "nips",
+    "icml",
+    "aaai",
+    "tnn",
+    "ijon",
+    "jmlr",
+    "kbs",
+    "nca",
+    "nn",
+    "ijcai",
+    "colt",
+    "ijcnn"
+  ],
+  "Language": [
+    "acl",
+    "emnlp",
+    "naacl",
+    "coling",
+    "tacl",
+    "lrec",
+    "eacl",
+    "semeval",
+    "conll",
+    "sigdial",
+    "csl",
+    "ijcnlp",
+    "inlg"
+  ],
+  "Speech": [
+    "interspeech",
+    "icassp"
+  ],
+  "Vision": [
+    "cvpr",
+    "eccv",
+    "iccv",
+    "wacv",
+    "pami",
+    "tip",
+    "pr"
+  ]
+}

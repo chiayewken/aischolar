@@ -1,7 +1,8 @@
 import json
+import re
 import time
 from collections import Counter
-from typing import Optional, Set
+from typing import Set, List, Dict
 
 from fire import Fire
 from lxml import etree
@@ -23,7 +24,7 @@ class Timer(BaseModel):
 
 def convert_dblp_to_jsonl(
     path_in: str = "data/dblp-2021-08-01.xml.gz",
-    path_out: str = "data/dblp-2021-08-01.jsonl",
+    path_out: str = "data/raw.jsonl",
 ):
     with Timer(name=str(dict(parse=path_in))):
         parser = etree.XMLParser(load_dtd=True)
@@ -31,102 +32,130 @@ def convert_dblp_to_jsonl(
 
     with open(path_out, "w") as f:
         for child in tqdm(tree.getroot(), desc=str(dict(write=path_out))):
-            record = dict((sub.tag, sub.text) for sub in child)
+            record = {}
+            for sub in child:
+                record.setdefault(sub.tag, []).append(sub.text)
             f.write(json.dumps(record) + "\n")
 
 
-class Paper(BaseModel):
-    title: Optional[str]
-    ee: Optional[str]
-    url: Optional[str]
-    year: Optional[int]
-
-    def get_conference(self) -> Optional[str]:
-        url = self.url or ""
-        prefix = "db/conf/"
-        if url.startswith(prefix):
-            name = url[len(prefix) :].split("/")[0]
-            return name
+class RawPaper(BaseModel):
+    title: List[str]
+    author: List[str]
+    year: List[int]
+    ee: List[str]
+    url: List[str]
 
     @classmethod
-    def check_valid_line(cls, text: str, conferences: Set[str] = None) -> bool:
-        prefix = "db/conf/"
-        keys = ["title", "ee", "url", "year", prefix]
-        if not all([k in text for k in keys]):
+    def parse_venue(cls, text: str) -> str:
+        # Eg db/journals/jmlr, db/conf/acl
+        for match in re.findall(pattern="db/\\w*/\\w*", string=text):
+            return match.split("/")[-1]
+        return ""
+
+    @classmethod
+    def check_valid_line(cls, text: str, venues: Set[str] = None) -> bool:
+        keys = ["title", "author", "year", "ee", "url"]
+        if not all([f'"{k}"' in text for k in keys]):
             return False
 
-        if conferences:
-            name = text.split(prefix)[-1].split("/")[0]
-            return name in conferences
+        if venues:
+            return cls.parse_venue(text) in venues
         return True
 
-    def is_valid(self) -> bool:
-        values = [self.title, self.ee, self.get_conference(), self.year]
-        return all([x is not None for x in values])
 
-    def as_text(self) -> str:
-        assert self.is_valid()
-        return f"{self.year} {self.get_conference()} {self.ee} {self.title}"
+def test_raw_paper():
+    record = {
+        "author": ["Matt Garley", "Julia Hockenmaier"],
+        "title": [
+            "Beefmoves: Dissemination, Diversity, and Dynamics of English Borrowings in a German Hip Hop Forum."
+        ],
+        "pages": ["135-139"],
+        "year": ["2012"],
+        "booktitle": ["ACL (2)"],
+        "ee": ["https://www.aclweb.org/anthology/P12-2027/"],
+        "crossref": ["conf/acl/2012-2"],
+        "url": ["db/conf/acl/acl2012-2.html#GarleyH12"],
+    }
+    paper = RawPaper(**record)
+    assert paper.check_valid_line(json.dumps(record))
+    assert paper.check_valid_line(json.dumps(record), venues={"acl"})
+    assert not paper.check_valid_line(json.dumps(record), venues={"emnlp"})
+    record.pop("ee")
+    assert not paper.check_valid_line(json.dumps(record))
+    return paper
+
+
+def test_raw_data(path: str = "data/raw.jsonl", path_venues="data/venues.json"):
+    with open(path_venues) as f:
+        venues = [x for lst in json.load(f).values() for x in lst]
+
+    outputs = []
+
+    with open(path) as f:
+        for line in tqdm(f.readlines()):
+            o = RawPaper.parse_venue(line)
+            outputs.append(o)
+
+    output_set = set(outputs)
+    for v in venues:
+        assert v in output_set
+    print(Counter(outputs).most_common(256))
+
+
+class Paper(BaseModel):
+    title: str
+    authors: List[str]
+    year: int
+    venue: str
+    url: str
+
+    @classmethod
+    def from_raw(cls, raw: RawPaper):
+        return cls(
+            title=raw.title[0],
+            authors=raw.author,
+            year=raw.year[0],
+            venue=raw.parse_venue(raw.url[0]),
+            url=raw.ee[0],
+        )
 
 
 def test_paper():
-    record = {
-        "author": "Jianbo Tang",
-        "title": "LICHEE: Improving Language Model Pre-training with Multi-grained Tokenization.",
-        "pages": "1383-1392",
-        "year": "2021",
-        "booktitle": "ACL/IJCNLP (Findings)",
-        "ee": "https://aclanthology.org/2021.findings-acl.119",
-        "crossref": "conf/acl/2021f",
-        "url": "db/conf/acl/acl2021f.html#GuoZZNLLLT21",
-    }
-    paper = Paper(**record)
-    print(paper.as_text())
+    raw = test_raw_paper()
+    paper = Paper.from_raw(raw)
+    print(paper.json(indent=2))
 
 
-def test_dblp(path: str = "data/dblp-2021-08-01.jsonl"):
-    events = []
-    with open(path) as f:
-        for line in tqdm(f.readlines()):
-            if Paper.check_valid_line(line):
-                record = json.loads(line)
-                url = record.get("url", "")
-                prefix = "db/conf/"
-                name = url[len(prefix) :].split("/")[0]
-                events.append(name)
-
-    print(Counter(events))
-
-
-def write_results(
-    path_in: str = "data/dblp-2021-08-01.jsonl",
-    path_out: str = "data/results.txt",
-    path_conference_list: str = "data/conferences.txt",
+def filter_papers(
+    path_in: str = "data/raw.jsonl",
+    path_out: str = "data/filtered.jsonl",
+    path_venues: str = "data/venues.json",
 ):
-    with open(path_conference_list) as f:
-        name_to_paper = {line.strip(): [] for line in f}
-        conferences = set(name_to_paper.keys())
+    with open(path_venues) as f:
+        label_to_papers: Dict[str, List[Paper]] = {
+            x: [] for lst in json.load(f).values() for x in lst
+        }
+    labels = set(label_to_papers.keys())
 
-    texts = []
+    lines = []
     with open(path_in) as f:
-        progress = tqdm(f.readlines(), desc=str(dict(write_results=path_in)))
-        for line in progress:
-            if Paper.check_valid_line(line, conferences):
-                progress.set_postfix(success=len(texts))
-                record = json.loads(line)
-                paper = Paper(**record)
-                if paper.is_valid():
-                    texts.append(paper.as_text())
+        for text in tqdm(f.readlines(), desc="Check valid"):
+            if RawPaper.check_valid_line(text, venues=labels):
+                lines.append(text)
+
+    for text in tqdm(lines, desc="Parse papers"):
+        try:
+            paper = Paper.from_raw(RawPaper(**json.loads(text)))
+            assert paper.venue in label_to_papers.keys()
+            label_to_papers[paper.venue].append(paper)
+        except Exception as e:
+            print(e)
 
     with open(path_out, "w") as f:
-        f.write("\n".join(texts))
-
-
-def test_results(path: str = "data/results.txt"):
-    with Timer(name=str(dict(load=path))):
-        with open(path) as f:
-            lines = f.readlines()
-            print(dict(lines=len(lines)))
+        for k, lst in label_to_papers.items():
+            assert lst
+            for paper in lst:
+                f.write(paper.json() + "\n")
 
 
 if __name__ == "__main__":

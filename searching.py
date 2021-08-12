@@ -8,7 +8,7 @@ from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_distances
 
-from data_loading import Timer
+from data_loading import Timer, Paper
 
 
 class Searcher(BaseModel):
@@ -62,6 +62,39 @@ def test_save(path_data="data/results.txt"):
     with Timer(name="run_after_load"):
         results = searcher.run("causality")
         print(results[:3])
+
+
+class Reranker(BaseModel):
+    def run(self, query: str, papers: List[Paper]) -> List[Paper]:
+        front, back = [], []
+        for p in papers:
+            if self.condition(query, p):
+                front.append(p)
+            else:
+                back.append(p)
+        return front + back
+
+    def condition(self, query: str, paper: Paper) -> bool:
+        raise NotImplementedError
+
+
+class YearReranker(Reranker):
+    def condition(self, query: str, paper: Paper) -> bool:
+        return str(paper.year) in query
+
+
+class VenueReranker(Reranker):
+    def condition(self, query: str, paper: Paper) -> bool:
+        return paper.venue.lower() in query.lower().split()
+
+
+class AuthorReranker(Reranker):
+    def condition(self, query: str, paper: Paper) -> bool:
+        query_set = set(query.lower().split())
+        for author in paper.authors:
+            if set(author.lower().split()).issubset(query_set):
+                return True
+        return False
 
 
 if __name__ == "__main__":
