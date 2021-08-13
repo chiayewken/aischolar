@@ -1,13 +1,17 @@
-## ReSearch
-
-Find NLP Conference Papers Easily
+## AI Scholar
 
 ### Usage
 
 ```
-bash setup_data.sh
 pip install -r requirements.txt
+bash setup_data.sh
 streamlit run main.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501) in your browser
+### Deploying to Heroku
+
+```
+heroku container:login
+heroku container:push --app <your-app-name> web
+heroku container:release --app <your-app-name> web
+```

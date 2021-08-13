@@ -130,6 +130,7 @@ def filter_papers(
     path_in: str = "data/raw.jsonl",
     path_out: str = "data/filtered.jsonl",
     path_venues: str = "data/venues.json",
+    min_year: int = 2012,
 ):
     with open(path_venues) as f:
         label_to_papers: Dict[str, List[Paper]] = {
@@ -147,7 +148,8 @@ def filter_papers(
         try:
             paper = Paper.from_raw(RawPaper(**json.loads(text)))
             assert paper.venue in label_to_papers.keys()
-            label_to_papers[paper.venue].append(paper)
+            if paper.year >= min_year:
+                label_to_papers[paper.venue].append(paper)
         except Exception as e:
             print(e)
 

@@ -131,4 +131,4 @@ dmypy.json
 # New
 .idea/
 data/dblp*
-data/raw.jsonl
+data/*.jsonl

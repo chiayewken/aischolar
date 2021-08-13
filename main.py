@@ -9,18 +9,6 @@ from data_loading import Paper
 from searching import Searcher, YearReranker, AuthorReranker, VenueReranker
 
 
-@st.cache
-def cache_searcher(path_data: str) -> bytes:
-    with open(path_data) as f:
-        y = f.readlines()
-    papers = [Paper(**json.loads(line)) for line in y]
-    x = [" ".join([p.title, " ".join(p.authors)]) for p in papers]
-
-    searcher = Searcher()
-    searcher.fit(x=x, y=y)
-    return pickle.dumps(searcher)
-
-
 def highlight(query: str, text: str, color: str = "lightyellow") -> str:
     words = []
     query_set = set(query.lower().split())
@@ -34,7 +22,7 @@ def highlight(query: str, text: str, color: str = "lightyellow") -> str:
 
 
 def main(
-    path_data: str = "data/filtered.jsonl",
+    path_searcher: str = "data/searcher.pkl",
     path_venues: str = "data/venues.json",
     query: str = "optimal vocabulary",
     max_results: int = 100,
@@ -51,7 +39,9 @@ def main(
     venues = st.sidebar.multiselect("Paper Venue", venues, default=venues)
     query = st.text_input("Search by Title, Author, Year or Venue", value=query)
     min_year, max_year = st.slider("Year Range", 2012, 2021, value=(2018, 2021))
-    searcher = pickle.loads(cache_searcher(path_data))
+    with open(path_searcher, "rb") as f:
+        searcher = pickle.load(f)
+        assert isinstance(searcher, Searcher)
 
     venue_set = set(venues)
     results: List[str] = searcher.run(query)

@@ -1,3 +1,4 @@
+import json
 import pickle
 from typing import List, Any
 
@@ -95,6 +96,18 @@ class AuthorReranker(Reranker):
             if set(author.lower().split()).issubset(query_set):
                 return True
         return False
+
+
+def save_searcher(path_in: str, path_out: str):
+    with open(path_in) as f:
+        y = f.readlines()
+    papers = [Paper(**json.loads(line)) for line in y]
+    x = [" ".join([p.title, " ".join(p.authors)]) for p in papers]
+
+    searcher = Searcher()
+    searcher.fit(x=x, y=y)
+    with open(path_out, "wb") as f:
+        pickle.dump(searcher, f)
 
 
 if __name__ == "__main__":
