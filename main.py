@@ -7,7 +7,7 @@ from typing import Dict, List
 import streamlit as st
 
 from data_loading import Paper
-from searching import AuthorReranker, Searcher, VenueReranker, YearReranker
+from searching import AuthorReranker, Searcher, VenueReranker, YearReranker, SortYearReranker
 
 
 def highlight(query: str, text: str, color: str = "lightyellow") -> str:
@@ -63,6 +63,7 @@ def main(
     venues = st.sidebar.multiselect("Paper Venue", venues, default=venues)
     query = get_query("Search by Title, Author, Year or Venue", default=query)
     min_year, max_year = st.slider("Year Range", 2012, 2021, value=(2018, 2021))
+    sort_style = st.sidebar.radio("Sort by", ("Relevance", "Year"))
     with open(path_searcher, "rb") as f:
         searcher = pickle.load(f)
         assert isinstance(searcher, Searcher)
@@ -76,6 +77,7 @@ def main(
             if p.venue in venue_set:
                 papers.append(p)
 
+
     duration = round(time.time() - start, 3)
     max_results = min(max_results, len(papers))
     st.write(f"Showing {max_results} of {len(papers)} results ({duration} seconds)")
@@ -86,6 +88,8 @@ def main(
     
     for reranker in [YearReranker(), VenueReranker(), AuthorReranker()]:
         papers = reranker.run(query, papers)
+    if sort_style == 'Year':
+        papers = SortYearReranker().run(query, papers)
 
 
     for p in papers[:max_results]:
