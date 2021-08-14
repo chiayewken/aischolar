@@ -82,9 +82,12 @@ def main(
     max_results = min(max_results, len(papers))
     st.write(f"Showing {max_results} of {len(papers)} results ({duration} seconds)")
 
+    page_number = st.sidebar.slider("Page number", 1, len(papers)//max_results+1, 1)
+    
     vip_authors = get_top_k_authors(papers)
     selected_author = st.multiselect("Top Authors related to search", vip_authors)
     query = query + " " + " ".join(selected_author)
+
     
     for reranker in [YearReranker(), VenueReranker(), AuthorReranker()]:
         papers = reranker.run(query, papers)
@@ -92,7 +95,8 @@ def main(
         papers = SortYearReranker().run(query, papers)
 
 
-    for p in papers[:max_results]:
+    start, end = (page_number-1)*max_results, min(len(papers), page_number*max_results)
+    for p in papers[start:end]:
         text = f"[{p.year} {p.venue.upper()}]({p.url}) {p.title}"
         text = highlight(query, text)
         st.markdown(text, unsafe_allow_html=True)
