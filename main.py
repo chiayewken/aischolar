@@ -1,12 +1,13 @@
 import json
 import pickle
 import time
-from typing import List, Dict
+from collections import Counter
+from typing import Dict, List
 
 import streamlit as st
 
 from data_loading import Paper
-from searching import Searcher, YearReranker, AuthorReranker, VenueReranker
+from searching import AuthorReranker, Searcher, VenueReranker, YearReranker
 
 
 def highlight(query: str, text: str, color: str = "lightyellow") -> str:
@@ -20,6 +21,9 @@ def highlight(query: str, text: str, color: str = "lightyellow") -> str:
         words.append(w)
     return " ".join(words)
 
+def get_top_k_authors(papers, k=7):
+    author_list = Counter([a for p in papers for a in p.authors]).most_common(5)
+    return [a[0] for a in author_list]
 
 def get_query(label: str, default: str) -> str:
     # Support input via url parameters
@@ -62,12 +66,17 @@ def main(
             if p.venue in venue_set:
                 papers.append(p)
 
-    for reranker in [YearReranker(), VenueReranker(), AuthorReranker()]:
-        papers = reranker.run(query, papers)
-
     duration = round(time.time() - start, 3)
     max_results = min(max_results, len(papers))
     st.write(f"Showing {max_results} of {len(papers)} results ({duration} seconds)")
+
+    vip_authors = get_top_k_authors(papers)
+    select_author = st.multiselect("Top Authors related to search", vip_authors)
+    query = query + ' '.join(select_author)
+    
+    for reranker in [YearReranker(), VenueReranker(), AuthorReranker()]:
+        papers = reranker.run(query, papers)
+
 
     for p in papers[:max_results]:
         text = f"[{p.year} {p.venue.upper()}]({p.url}) {p.title}"
