@@ -21,6 +21,16 @@ def highlight(query: str, text: str, color: str = "lightyellow") -> str:
     return " ".join(words)
 
 
+def get_query(label: str, default: str) -> str:
+    # Support input via url parameters
+    params = st.experimental_get_query_params()
+    query = params.get("query", default)
+    query = query[0] if isinstance(query, list) else query
+    query = st.text_input(label, value=query)
+    st.experimental_set_query_params(query=query)
+    return query
+
+
 def main(
     path_searcher: str = "data/searcher.pkl",
     path_venues: str = "data/venues.json",
@@ -37,7 +47,7 @@ def main(
     venue_type = st.sidebar.radio("Research Category", sorted(type_to_venues.keys()))
     venues = type_to_venues[venue_type]
     venues = st.sidebar.multiselect("Paper Venue", venues, default=venues)
-    query = st.text_input("Search by Title, Author, Year or Venue", value=query)
+    query = get_query("Search by Title, Author, Year or Venue", default=query)
     min_year, max_year = st.slider("Year Range", 2012, 2021, value=(2018, 2021))
     with open(path_searcher, "rb") as f:
         searcher = pickle.load(f)
