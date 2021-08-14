@@ -21,7 +21,17 @@ def highlight(query: str, text: str, color: str = "lightyellow") -> str:
         words.append(w)
     return " ".join(words)
 
-def get_top_k_authors(papers, k=7):
+def highlight_author(selected_author: List[str], authors: List[str], color: str = 'lightgreen') -> str:
+    author_list = []
+    for a in authors:
+        if a in selected_author:
+            a = f'<mark style="background-color: {color};font-size:10px">{a}</mark>'
+        else:
+            a = f'<mark style="font-size: 10px">{a}</mark>'
+        author_list.append(a)
+    return ", ".join(author_list)
+
+def get_top_k_authors(papers: Paper, k: int = 7) -> List[str]:
     author_list = Counter([a for p in papers for a in p.authors]).most_common(5)
     return [a[0] for a in author_list]
 
@@ -71,8 +81,8 @@ def main(
     st.write(f"Showing {max_results} of {len(papers)} results ({duration} seconds)")
 
     vip_authors = get_top_k_authors(papers)
-    select_author = st.multiselect("Top Authors related to search", vip_authors)
-    query = query + ' '.join(select_author)
+    selected_author = st.multiselect("Top Authors related to search", vip_authors)
+    query = query + " " + " ".join(selected_author)
     
     for reranker in [YearReranker(), VenueReranker(), AuthorReranker()]:
         papers = reranker.run(query, papers)
@@ -82,6 +92,9 @@ def main(
         text = f"[{p.year} {p.venue.upper()}]({p.url}) {p.title}"
         text = highlight(query, text)
         st.markdown(text, unsafe_allow_html=True)
+        if len(selected_author) > 0:
+            text = highlight_author(selected_author, p.authors)
+            st.markdown(text, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
