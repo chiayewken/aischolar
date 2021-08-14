@@ -62,6 +62,7 @@ def main(
     venues = type_to_venues[venue_type]
     venues = st.sidebar.multiselect("Paper Venue", venues, default=venues)
     query = get_query("Search by Title, Author, Year or Venue", default=query)
+
     min_year, max_year = st.slider("Year Range", 2012, 2021, value=(2018, 2021))
     sort_style = st.sidebar.radio("Sort by", ("Relevance", "Year"))
     with open(path_searcher, "rb") as f:
@@ -82,7 +83,7 @@ def main(
     max_results = min(max_results, len(papers))
     st.write(f"Showing {max_results} of {len(papers)} results ({duration} seconds)")
 
-    page_number = st.sidebar.slider("Page number", 1, len(papers)//max_results+1, 1)
+    page_number = st.sidebar.number_input("Page number", min_value=1, max_value=len(papers)//max_results+1, value=1)
     
     vip_authors = get_top_k_authors(papers)
     selected_author = st.multiselect("Top Authors related to search", vip_authors)
