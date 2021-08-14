@@ -33,7 +33,7 @@ def highlight_author(selected_author: List[str], authors: List[str], color: str 
 
 def get_top_k_authors(papers: Paper, k: int = 7) -> List[str]:
     author_list = Counter([a for p in papers for a in p.authors]).most_common(5)
-    return [a[0] for a in author_list]
+    return [f'{a[0]}({a[1]})' for a in author_list]
 
 def get_query(label: str, default: str) -> str:
     # Support input via url parameters
@@ -84,12 +84,13 @@ def main(
     st.write(f"Showing {max_results} of {len(papers)} results ({duration} seconds)")
 
     page_number = st.sidebar.number_input("Page number", min_value=1, max_value=len(papers)//max_results+1, value=1)
-    
+
     vip_authors = get_top_k_authors(papers)
     selected_author = st.multiselect("Top Authors related to search", vip_authors)
+    selected_author = [o.split('(')[0] for o in selected_author]
     query = query + " " + " ".join(selected_author)
 
-    
+
     for reranker in [YearReranker(), VenueReranker(), AuthorReranker()]:
         papers = reranker.run(query, papers)
     if sort_style == 'Year':
