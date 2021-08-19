@@ -97,6 +97,10 @@ class AuthorReranker(Reranker):
                 return True
         return False
 
+class SortYearReranker(Reranker):
+    def run(self, query: str, papers: List[Paper]) -> List[Paper]:
+        return sorted(papers, reverse=True, key=lambda x: x.year)
+
 
 def save_searcher(path_in: str, path_out: str):
     with open(path_in) as f:
