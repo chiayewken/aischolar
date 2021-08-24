@@ -37,11 +37,19 @@ def get_top_k_authors(papers: Paper, k: int = 7) -> List[str]:
 
 def get_query(label: str, default: str) -> str:
     # Support input via url parameters
+    key = "default_key"
+    default = st.session_state.get(key, default)
+
     params = st.experimental_get_query_params()
-    query = params.get("query", default)
-    query = query[0] if isinstance(query, list) else query
-    query = st.text_input(label, value=query)
-    st.experimental_set_query_params(query=query)
+    if params:
+        query = params.get("query", default)
+        st.experimental_set_query_params()
+        query = query[0] if isinstance(query, list) else query
+        query = st.text_input(label, value=query)
+        st.session_state[key] = query
+    else:
+        query = st.text_input(label, value=default)
+
     return query
 
 
