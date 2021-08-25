@@ -1,5 +1,6 @@
-## AI Scholar
+## [AI Scholar](http://aischolar.academy/)
 Aim to help AI researchers search papers more efficiently, it **only** contains the most updated AI papers from top conferences and journals.
+
 [Website](http://aischolar.academy/)
 
 #### Search with Alfred
@@ -28,4 +29,4 @@ We are open to suggestions on how to improve the website.
 If this project help you search paper easier, you can give us a cup of coffee :) 
 
 
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/aischolar)
+[![paypal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/aischolar)

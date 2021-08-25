@@ -62,6 +62,8 @@ def main(
 ):
     start = time.time()
     st.set_page_config(page_title=title, initial_sidebar_state="collapsed")
+
+    st.markdown("[![GitHub](https://img.shields.io/badge/AI_Scholar-GitHub-blue.svg)](https://github.com/chiayewken/aischolar)")
     with open(path_venues) as f:
         type_to_venues: Dict[str, List[str]] = json.load(f)
         type_to_venues["All"] = [v for lst in type_to_venues.values() for v in lst]
